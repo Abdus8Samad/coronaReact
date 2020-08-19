@@ -145,6 +145,9 @@ div.recoveryRate{
       width:70% !important;
     }
   }
+  div.stats p{
+    font-size:1.2em;
+  }
 }
 div.news{
   padding:2px;
@@ -199,6 +202,7 @@ div.countries{
       border-radius:20px;
       padding:5px;
       height:70px;
+      margin-bottom:10px;
       box-shadow:1px 4px 7px rgba(0,0,0,0.2);
       img{
         float:left;
@@ -211,8 +215,8 @@ div.countries{
         top:-50%;
       }
       p{
-        margin-top:-7px;
-        font-size:15px;
+        margin-top:-1.4vw;
+        font-size:0.8em;
       }
     }
     div.country:hover{
@@ -226,6 +230,9 @@ svg.graph,svg.graph1,svg.graph2{
 }
 svg.graph3{
   .a{fill:url(#a);}.b{fill:none;stroke:#2fd0aa;stroke-linecap:round;stroke-width:2px;}
+}
+div.case h4{
+  font-size:1.8vw;
 }
 @media screen and (min-width:760px){
   div.case{

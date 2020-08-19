@@ -4,26 +4,14 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import Axios from 'axios';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
+import { connect } from 'react-redux';
+import { setCases, setNews, setCountries } from './redux/actionCreator';
 
 class App extends React.Component{
   state = {
     isDark: false,
     width:window.innerWidth,
     country:'',
-    totalCases:'21,624,941',
-    recovered:'14,338,298',
-    activeCases:'6,517,539',
-    deaths:'769,104',
-    recoveryRate:65,
-    news:{
-      source:'Reuters',
-      url:'',
-      publishedAt:'yyyy/mm/dd',
-      urlToImage:'https://s4.reutersmedia.net/resources_v2/images/rcom-default.png',
-      title:'TITLE',
-      content:'....................................'
-    },
-    countries:[],
     searchQuery:''
   }
   changeTheme = () =>{
@@ -45,7 +33,7 @@ class App extends React.Component{
     .then(response =>{
       let { cases : totalCases, active : activeCases, recovered, deaths } = response.data;
       let recoveryRate = ((recovered/totalCases)*100).toString().substr(0,4);
-      this.setState({
+      this.props.setCases({
         totalCases,
         recovered,
         activeCases,
@@ -57,40 +45,40 @@ class App extends React.Component{
     .then(response =>{
       let news = response.data.articles[2];
       let { source, url, publishedAt, urlToImage, title, content } = news;
-      this.setState({
-        news:{
+      this.props.setNews({
           url,
           source:source.name,
           publishedAt,
           urlToImage,
           title,
           content
-        }
       })
     })
     Axios.get('https://corona-api.com/countries')
     .then(response =>{
         let countries = [...response.data.data];
-        this.setState({
+        this.props.setCountries(
           countries
-        })  
+        )
     })
   }
   setCountry = (code) =>{
-    let country = this.state.countries.find((country) => country.code === code);
-    let { confirmed : totalCases, deaths, recovered, critical : active, calculated } = country.latest_data;
-    this.setState({
+    let country = this.props.countries.find((country) => country.code === code);
+    let { confirmed : totalCases, deaths, recovered, critical : activeCases , calculated } = country.latest_data;
+    this.props.setCases({
       totalCases,
       recovered,
-      active,
+      activeCases,
       deaths,
       recoveryRate:Number(calculated.recovery_rate.toString().substr(0,4)),
+    })
+    this.setState({
       country:country.name
     },() =>{
-      let parent = document.querySelector('div.countries');
-      let elem = document.querySelector(`div#${code}`);
-      parent.scrollTo(0, elem.offsetTop - parent.offsetTop);
-    })
+        let parent = document.querySelector('div.countries');
+        let elem = document.querySelector(`div#${code}`);
+        parent.scrollTo(0, elem.offsetTop - parent.offsetTop);
+      })
   }
   inputChange = (e) =>{
     e.preventDefault();
@@ -151,8 +139,8 @@ class App extends React.Component{
         <h4>Ratio Of Recovery</h4>
         <div className="progress">
         <CircularProgressbar
-          value={this.state.recoveryRate}
-          text={`${this.state.recoveryRate}%`}
+          value={this.props.cases.recoveryRate}
+          text={`${this.props.cases.recoveryRate}%`}
           strokeWidth={4}
           styles={buildStyles({
             // Rotation of path and trail, in number of turns (0-1)
@@ -178,8 +166,8 @@ class App extends React.Component{
       />
         </div>
         <div className="stats">
-          <p>{this.state.totalCases/1000}k Affected</p>
-          <p>{this.state.recovered/1000}k Recovered</p>
+          <p>{this.props.cases.totalCases/1000}k Affected</p>
+          <p>{this.props.cases.recovered/1000}k Recovered</p>
         </div>  
     </div>
       )
@@ -190,16 +178,16 @@ class App extends React.Component{
           <h3>News</h3>
           <h6>
             <div className="source">
-              Source: <a href={this.state.news.url}>{this.state.news.source}</a>
+              Source: <a href={this.props.news.url}>{this.props.news.source}</a>
             </div>
             <div className="date">
-              {this.state.news.publishedAt.substr(0,10).replace(/-/g,'/')}
+              {this.props.news.publishedAt.substr(0,10).replace(/-/g,'/')}
             </div>
           </h6>
           <div className="content">
-            <img src={this.state.news.urlToImage} alt={this.state.news.source}/>
-            <h4>{this.state.news.title}</h4><br />
-            <p>{this.state.news.content.substr(0,100)}...</p>
+            <img src={this.props.news.urlToImage} alt={this.props.news.source}/>
+            <h4>{this.props.news.title}</h4><br />
+            <p>{this.props.news.content.substr(0,100)}...</p>
           </div>
         </div>
       )
@@ -207,9 +195,9 @@ class App extends React.Component{
     const CountryCards = () =>{
       return(
         <div className="countryCards">
-          {this.state.countries.sort((a, b) => b.latest_data.confirmed - a.latest_data.confirmed).filter((country) => country.name.toUpperCase().includes(this.state.searchQuery.toUpperCase())).map(country =>{
+          {this.props.countries.sort((a, b) => b.latest_data.confirmed - a.latest_data.confirmed).filter((country) => country.name.toUpperCase().includes(this.state.searchQuery.toUpperCase())).map(country =>{
             return(
-              <div className="country" style={{"border":this.state.country == country.name ? '1px solid red' : ''}} id={country.code} key={country.code} onClick={() => this.setCountry(country.code)}>
+              <div className="country" style={{"border":this.state.country === country.name ? '1px solid red' : ''}} id={country.code} key={country.code} onClick={() => this.setCountry(country.code)}>
                 <img src={`https://www.countryflags.io/${country.code}/flat/64.png`} alt={country.name+' flag'}/>
                 <h4>{country.name}</h4>
                 <svg xmlns="http://www.w3.org/2000/svg" className="upArrow" width="14" height="7" viewBox="0 0 14 9"><path className="a" d="M6.211,1.015a1,1,0,0,1,1.579,0l4.955,6.371A1,1,0,0,1,11.955,9H2.045a1,1,0,0,1-.789-1.614Z"/></svg>
@@ -249,7 +237,7 @@ class App extends React.Component{
           <div style={contentBoxes} className={"case " + className}>
               <h4>
                 {name}
-                <svg xmlns="http://www.w3.org/2000/svg" className={arrow} width="10" height="6" viewBox="0 0 14 9"><path className="a" d="M6.211,1.015a1,1,0,0,1,1.579,0l4.955,6.371A1,1,0,0,1,11.955,9H2.045a1,1,0,0,1-.789-1.614Z"/></svg>  
+                <svg xmlns="http://www.w3.org/2000/svg" className={arrow} width="8" height="5" viewBox="0 0 14 9"><path className="a" d="M6.211,1.015a1,1,0,0,1,1.579,0l4.955,6.371A1,1,0,0,1,11.955,9H2.045a1,1,0,0,1-.789-1.614Z"/></svg>  
               </h4>
               <h2>{count.toLocaleString('en-US')}</h2>
               <div>
@@ -263,10 +251,10 @@ class App extends React.Component{
       content = 
       <div className="content">
         <div className="cases">
-          {cases('totalCases','Total Cases','upArrow',this.state.totalCases,'GraphLarge')}
-          {cases('recovered','Recovered','downArrow',this.state.recovered,'Graph3Large')}
-          {cases('activeCases','Active Cases','upArrow',this.state.activeCases,'Graph2Large')}
-          {cases('totalDeaths','Total Deaths','downArrow',this.state.deaths,'Graph1Large')}
+          {cases('totalCases','Total Cases','upArrow',this.props.cases.totalCases,'GraphLarge')}
+          {cases('recovered','Recovered','downArrow',this.props.cases.recovered,'Graph3Large')}
+          {cases('activeCases','Active Cases','upArrow',this.props.cases.activeCases,'Graph2Large')}
+          {cases('totalDeaths','Total Deaths','downArrow',this.props.cases.deaths,'Graph1Large')}
           {<RecoveryRate />}
         </div>
       <div className="others">
@@ -278,10 +266,10 @@ class App extends React.Component{
      content = 
      <div className="content">
         <div className="cases">
-          {cases('totalCases','Total Cases','upArrow',this.state.totalCases,'GraphSmall')}
-          {cases('recovered','Recovered','downArrow',this.state.recovered,'Graph3Small')}
-          {cases('activeCases','Active Cases','upArrow',this.state.activeCases,'Graph2Small')}
-          {cases('totalDeaths','Total Deaths','downArrow',this.state.deaths,'Graph1Small')}
+          {cases('totalCases','Total Cases','upArrow',this.props.cases.totalCases,'GraphSmall')}
+          {cases('recovered','Recovered','downArrow',this.props.cases.recovered,'Graph3Small')}
+          {cases('activeCases','Active Cases','upArrow',this.props.cases.activeCases,'Graph2Small')}
+          {cases('totalDeaths','Total Deaths','downArrow',this.props.cases.deaths,'Graph1Small')}
         </div>
         <div className="others">
           {<News />}
@@ -293,10 +281,10 @@ class App extends React.Component{
       content = 
       <div className="content">
         <div className="cases">
-          {cases('totalCases','Total Cases','upArrow',this.state.totalCases,'GraphXSmall')}
-          {cases('recovered','Recovered','downArrow',this.state.recovered,'Graph3XSmall')}
-          {cases('activeCases','Active Cases','upArrow',this.state.activeCases,'Graph2XSmall')}
-          {cases('totalDeaths','Total Deaths','downArrow',this.state.deaths,'Graph1XSmall')}
+          {cases('totalCases','Total Cases','upArrow',this.props.cases.totalCases,'GraphXSmall')}
+          {cases('recovered','Recovered','downArrow',this.props.cases.recovered,'Graph3XSmall')}
+          {cases('activeCases','Active Cases','upArrow',this.props.cases.activeCases,'Graph2XSmall')}
+          {cases('totalDeaths','Total Deaths','downArrow',this.props.cases.deaths,'Graph1XSmall')}
         </div>
         {<Countries />}
         {<News />}
@@ -314,4 +302,20 @@ class App extends React.Component{
   }
 }
 
-export default App;
+const mapStateToProps = state =>{
+  return{
+    cases:state.cases,
+    news:state.news,
+    countries:state.countries
+  }
+}
+
+const mapDispatchToProps = dispatch =>{
+  return{
+    setCases:(obj) => {dispatch(setCases(obj))},
+    setNews:(obj) => {dispatch(setNews(obj))},
+    setCountries:(obj) => {dispatch(setCountries(obj))},
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
